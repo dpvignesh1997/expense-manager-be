@@ -1,0 +1,11 @@
+{
+  "name": "expense-manager-be",
+  "version": "1.0.0",
+  "description": "Expense Manager Backend Services",
+  "main": "server/app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Vignesh",
+  "license": "ISC"
+}
