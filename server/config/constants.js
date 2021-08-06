@@ -12,7 +12,7 @@ const CONSTANTS = {
   LOCAL_HOST: process.env.LOCAL_HOST,
 
   // Frontend
-  RESET_PASSWORD_URL: process.env.RESET_PASSWORD_URL,
+  FRONTEND_URL: process.env.FRONTEND_URL,
 
   PORT: process.env.PORT || 9090,
   APP: {
