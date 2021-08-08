@@ -1,8 +1,9 @@
 const { encrypt } = require("../../../utils/crypto");
+const Tokens = require("./model");
 const { QueryTypes } = require("sequelize");
 const sequelize = require("../../../utils/sequelize");
 const { ERRORS, SCHEMA } = require("../../../config/constants");
-const Users = require("../users/users.model");
+const Users = require("../customers/model");
 
 /**
  * Create Token

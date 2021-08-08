@@ -1,5 +1,5 @@
 const { AES, enc } = require("crypto-js");
-const { CONSTANTS } = require("../config/constansts");
+const { CONSTANTS } = require("../config/constants");
 
 /**
  * Encrypt Data

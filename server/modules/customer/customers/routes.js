@@ -1,6 +1,6 @@
 const router = require("express").Router();
 const passport = require("passport");
-const { CONSTANTS } = require("../../../config/constansts");
+const { CONSTANTS } = require("../../../config/constants");
 const { GetCurrentCustomer, UpdateCurrentCustomer } = require("./controllers");
 
 // Get Customer Profile

@@ -1,6 +1,57 @@
 const { ERRORS, CONSTANTS } = require("../../../config/constants");
 const { OK } = require("http-status-codes");
-const { signin, forgotPassword, changePassword } = require("./services");
+const {
+  signup,
+  signin,
+  forgotPassword,
+  changePassword,
+} = require("./services");
+
+/**
+ * Customer Signup
+ * @param {Request} req
+ * @param {Response} res
+ * @param {Next} next
+ * @returns {Response}
+ */
+const Signup = async (req, res, next) => {
+  try {
+    /**
+     * Get Username/Email & Password
+     * from Request Body.
+     */
+    const { full_name, email, password } = req.body;
+
+    /**
+     * Create Token for a New Session
+     */
+    await signup({
+      full_name,
+      email,
+      password,
+    });
+
+    /**
+     * Send Success Response
+     */
+    return res.status(OK).json({
+      statusCode: OK,
+      message: "Signup Successful",
+    });
+  } catch (error) {
+    // Log the Error
+    console.error("Error occurred in Signup API => ", error);
+
+    // Set Error Properties
+    const err =
+      error.statusCode && error.message ? error : ERRORS.INTERNAL_SERVER_ERROR;
+
+    /**
+     * @return {Response} Error
+     */
+    return res.status(err.statusCode).send({ message: err.message });
+  }
+};
 
 /**
  * Customer Signin
@@ -131,4 +182,5 @@ module.exports = {
   Signin,
   ForgotPassword,
   ChangePassword,
+  Signup,
 };

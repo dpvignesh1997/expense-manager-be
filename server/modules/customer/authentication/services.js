@@ -5,6 +5,39 @@ const { QueryTypes } = require("sequelize");
 const { compareHash, generateHash } = require("../../../utils/bcrypt");
 const { generateAccessToken } = require("../../../utils/crypto");
 const { createToken } = require("../tokens/services");
+const { createCustomer } = require("../../customer/customers/services");
+const {
+  checkIfCustomerAlreadyExists,
+} = require("../../customer/customers/helpers");
+
+/**
+ * Serialize Customer
+ * @param {Object} customer
+ * @returns
+ */
+const serializeCustomer = async (customer) => {
+  try {
+    const existingCustomer = await checkIfCustomerAlreadyExists(customer.email);
+
+    if (!existingCustomer) {
+      const { name, email, picture } = customer;
+
+      return await createCustomer({
+        full_name: name,
+        email,
+        picture,
+      });
+    }
+
+    return existingCustomer;
+  } catch (error) {
+    // Log
+    console.error("Error while Serializing Customer => ", error);
+
+    // Throw the Error
+    throw error;
+  }
+};
 
 /**
  * Reset Password for a user
@@ -18,7 +51,7 @@ const forgotPassword = async (email) => {
      * Email Address.
      * If does NOT exists send Bad Request Error.
      */
-    const [user] = await sequelize.query(
+    const [customer] = await sequelize.query(
       `
             SELECT 
                 customer.id,
@@ -33,7 +66,7 @@ const forgotPassword = async (email) => {
         type: QueryTypes.SELECT,
       }
     );
-    if (!user)
+    if (!customer)
       throw {
         statusCode: 400,
         message: "User does not exist.",
@@ -51,20 +84,20 @@ const forgotPassword = async (email) => {
 
     /**
      * Update the Reset Password Token details for
-     * the User
+     * the Customer
      */
     await sequelize.query(`
             UPDATE public."${SCHEMA.CUSTOMERS}" SET
                 password_reset_token = '${resetToken}',
                 password_reset_token_expires_at = (NOW() AT TIME ZONE 'UTC') + INTERVAL '2 HOUR'
-            WHERE id = ${user.id}
+            WHERE id = ${customer.id}
         `);
 
     const resetPasswordUrl = `${CONSTANTS.FRONTEND_URL}/reset-password`;
 
     /**
      * Send Reset Password Email
-     * to the User.
+     * to the Customer.
      */
     await sendMail({
       to: [email],
@@ -74,14 +107,14 @@ const forgotPassword = async (email) => {
 
     /**
      * Timeout Function to remove the Reset
-     * Password details from User after 2 hours.
+     * Password details from Customer after 2 hours.
      */
     setTimeout(async () => {
       await sequelize.query(`
             UPDATE public."${SCHEMA.CUSTOMERS}" SET
                 password_reset_token = NULL,
                 password_reset_token_expires_at = NULL
-            WHERE id = ${user.id}
+            WHERE id = ${customer.id}
         `);
     }, 7200000);
 
@@ -91,7 +124,7 @@ const forgotPassword = async (email) => {
     return true;
   } catch (error) {
     // Log the Error
-    console.error("Error in User Forgot Password => ", error);
+    console.error("Error in Customer Forgot Password => ", error);
 
     // Throw the Error
     throw error;
@@ -99,7 +132,7 @@ const forgotPassword = async (email) => {
 };
 
 /**
- * Change Password for a User
+ * Change Password for a Customer
  * @param {String} resetToken
  * @param {String} password
  * @returns {Boolean | Error}
@@ -111,7 +144,7 @@ const changePassword = async (resetToken, password) => {
      * valid.
      * If it is NOT valid send Bad Request Error.
      */
-    const [user] = await sequelize.query(
+    const [customer] = await sequelize.query(
       `
             SELECT * FROM public."${SCHEMA.CUSTOMERS}"
             WHERE password_reset_token = '${resetToken}'
@@ -121,7 +154,7 @@ const changePassword = async (resetToken, password) => {
         type: QueryTypes.SELECT,
       }
     );
-    if (!user)
+    if (!customer)
       throw {
         statusCode: 400,
         message: "Reset Password period has been expired.",
@@ -132,7 +165,7 @@ const changePassword = async (resetToken, password) => {
 
     /**
      * Update the New Password for
-     * the User.
+     * the Customer.
      */
     await sequelize.query(
       `
@@ -140,7 +173,7 @@ const changePassword = async (resetToken, password) => {
                 password_reset_token = NULL,
                 password_reset_token_expires_at = NULL,
                 password = '${passwordHash}'
-            WHERE id = ${user.id}
+            WHERE id = ${customer.id}
         `,
       {
         type: QueryTypes.UPDATE,
@@ -161,7 +194,7 @@ const changePassword = async (resetToken, password) => {
 };
 
 /**
- * Create Signin Token for a User
+ * Create Signin Token for a Customer
  * @param {String} username
  * @param {Password} password
  * @returns {Object | Error}
@@ -180,10 +213,10 @@ const signin = async (username, password) => {
       : "username";
 
     /**
-     * Get the User with provided Username type
+     * Get the Customer with provided Username type
      * and Username.
      */
-    const [user] = await sequelize.query(
+    const [customer] = await sequelize.query(
       `
             SELECT
                 customer.id,
@@ -205,7 +238,7 @@ const signin = async (username, password) => {
      * If the User does NOT exist
      * then send Bad Request Error.
      */
-    if (!user)
+    if (!customer)
       throw {
         statusCode: 400,
         message: "User does not exist.",
@@ -216,18 +249,18 @@ const signin = async (username, password) => {
      * If it does NOT match then
      * send Bad Request Error.
      */
-    if (!(await compareHash(password, user["password"])))
+    if (!(await compareHash(password, customer["password"])))
       throw {
         statusCode: 400,
         message: "Invalid Credentials.",
       };
 
-    // Query to Get User Details
+    // Query to Get Customer Details
     const QUERY = `
             SELECT
                 customer.id,
                 customer.email,
-                customer.full_name,
+                customer.full_name
             FROM public."${SCHEMA.CUSTOMERS}" AS customer
             WHERE customer.${usernameType} = '${username}'
             LIMIT 1
@@ -235,13 +268,13 @@ const signin = async (username, password) => {
 
     // Create New Session Token
     const [token] = await createToken({
-      id: user.id,
-      email: user.email,
-      full_name: user.full_name,
+      id: customer.id,
+      email: customer.email,
+      full_name: customer.full_name,
     });
 
-    // Get the User details
-    const [userInfo] = await sequelize.query(QUERY, {
+    // Get the Customer details
+    const [customerInfo] = await sequelize.query(QUERY, {
       type: QueryTypes.SELECT,
     });
 
@@ -249,7 +282,7 @@ const signin = async (username, password) => {
      * @returns {Object}
      */
     return {
-      userInfo,
+      customerInfo,
       token,
     };
   } catch (error) {
@@ -261,9 +294,36 @@ const signin = async (username, password) => {
   }
 };
 
+/**
+ * Create a New Customer
+ * @param {Object} customer
+ * @returns
+ */
+const signup = async (customer) => {
+  try {
+    /**
+     * Check if the Customer already exists.
+     * If YES, then throw USER_ALREADY_EXISTS error.
+     */
+    const existingCustomer = await checkIfCustomerAlreadyExists(customer.email);
+    if (existingCustomer) throw ERRORS.USER_ALREADY_EXISTS;
+
+    // Create New Customer
+    const createdCustomer = await createCustomer(customer);
+    return createdCustomer;
+  } catch (error) {
+    // Log the Error
+    console.error("Error in Customer Signin => ", error);
+
+    // Throw the Error
+    throw error;
+  }
+};
+
 module.exports = {
-  serializeUser,
+  serializeCustomer,
   signin,
   forgotPassword,
   changePassword,
+  signup,
 };

@@ -4,7 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 const { errors } = require("celebrate");
 const loggerIns = require("morgan");
-const { CONSTANTS } = require("./config/constansts");
+const { CONSTANTS } = require("./config/constants");
 const sequelize = require("./utils/sequelize");
 const passport = require("./utils/passport");
 const app = express();
@@ -36,8 +36,6 @@ const startExpressServer = async () => {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  app.use(errors());
-
   // enable options response
   app.use(cors());
 
@@ -46,6 +44,8 @@ const startExpressServer = async () => {
 
   // Enable Routes
   require("./router")(app);
+
+  app.use(errors());
 
   // Server Listening
   app.listen(process.env.PORT || 9091, async (err) => {

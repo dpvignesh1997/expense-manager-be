@@ -1,11 +1,40 @@
 const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const BearerStrategy = require("passport-http-bearer").Strategy;
-const {
-  validateToken,
-} = require("../modules/customers/tokens/tokens.services");
-const {
-  validateToken: validateAdminToken,
-} = require("../modules/admin/tokens/tokens.services");
+const { validateToken } = require("../modules/customer/tokens/services");
+// const {
+//   validateToken: validateAdminToken,
+// } = require("../modules/admin/tokens/services");
+
+/**
+ * Configure the Google strategy for use by Passport.
+ *
+ * OAuth 2.0-based strategies require a `verify` function which receives the
+ * credential (`accessToken`) for accessing the Google API on the user's
+ * behalf, along with the user's profile.  The function must invoke `cb`
+ * with a user object, which will be set at `req.user` in route handlers after
+ * authentication.
+ */
+// passport.use(
+//   "google",
+//   new GoogleStrategy(
+//     {
+//       clientID: process.env.GOOGLE_CLIENT_ID,
+//       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//       callbackURL: CALLBACKS.GOOGLE,
+//     },
+//     async function (accessToken, refreshToken, profile, cb) {
+//       // In this example, the user's Google profile is supplied as the user
+//       // record.  In a production-quality application, the Google profile should
+//       // be associated with a user record in the application's database, which
+//       // allows for account linking and authentication with other identity
+//       // providers.
+//       // console.log(accessToken, refreshToken, profile);
+//       const customer = await serializeUser(profile._json);
+//       return cb(null, customer);
+//     }
+//   )
+// );
 
 /**
  * Configure the Bearer strategy for Users taking Surveys.
@@ -15,8 +44,8 @@ passport.use(
   new BearerStrategy(async function (token, done) {
     try {
       // Validate Token
-      const user = await validateToken(token);
-      return done(null, user);
+      const customer = await validateToken(token);
+      return done(null, customer);
     } catch (error) {
       done(null, false);
     }
@@ -26,18 +55,18 @@ passport.use(
 /**
  * Configure the Bearer strategy for Admin Users.
  */
-passport.use(
-  "admin",
-  new BearerStrategy(async function (token, done) {
-    try {
-      // Validate Token
-      const user = await validateAdminToken(token);
-      return done(null, user);
-    } catch (error) {
-      done(null, false);
-    }
-  })
-);
+// passport.use(
+//   "admin",
+//   new BearerStrategy(async function (token, done) {
+//     try {
+//       // Validate Token
+//       const user = await validateAdminToken(token);
+//       return done(null, user);
+//     } catch (error) {
+//       done(null, false);
+//     }
+//   })
+// );
 
 /**
  * Configure Passport authenticated session persistence.
